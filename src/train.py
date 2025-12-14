@@ -9,6 +9,7 @@ from utils.rich_handlers import TrainingHandler, rich_training_context
 import sys 
 import torch
 from utils.boxes import stacker
+import os  # <-- Added to handle directory creation
 
 if __name__ == '__main__': 
     # Initialize logger and handlers
@@ -23,9 +24,14 @@ if __name__ == '__main__':
 
     num_classes = 3 
     model = DETR(num_classes=num_classes)
-    model.load_pretrained('pretrained/4426_model.pt')
+    # model.load_pretrained('pretrained/4426_model.pt')
     model.log_model_info()
     model.train() 
+
+    # ---------------- Ensure checkpoint directory exists ----------------
+    checkpoint_dir = "checkpoints"
+    os.makedirs(checkpoint_dir, exist_ok=True)
+    # -------------------------------------------------------------------
 
     opt = optim.Adam(model.parameters(), lr=1e-5)
     scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(opt, len(train_dataloader)*30, T_mult=2)
@@ -111,9 +117,10 @@ if __name__ == '__main__':
                 
                 # Save checkpoints
                 if epoch % 10 == 0 and epoch != 0: 
-                    checkpoint_path = f"checkpoints/{epoch}_model.pt"
+                    checkpoint_path = os.path.join(checkpoint_dir, f"{epoch}_model.pt")
                     save(model.state_dict(), checkpoint_path)
                     training_handler.save_checkpoint_status(checkpoint_path, epoch)
             
     # Final save
-    save(model.state_dict(), f"checkpoints/{epoch}_model.pt")
+    final_checkpoint_path = os.path.join(checkpoint_dir, f"{epoch}_model.pt")
+    save(model.state_dict(), final_checkpoint_path)
